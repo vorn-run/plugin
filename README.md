@@ -48,17 +48,23 @@ form — a bare `vorn` is rejected.
 
 Restart, or start a fresh session — bundled skills load at session start.
 
-**opencode** has its own skills system and does not read the skill files here.
-Add the MCP server:
+**opencode** reads skills natively. Add the MCP server, then point its
+`skills.paths` at a clone of this repo:
 
 ```
 opencode mcp add vorn -- npx -y @vornrun/mcp@latest
+git clone https://github.com/vorn-run/plugin ~/.config/opencode/vorn
 ```
 
-`opencode/plugin.js` in this repo carries the same knowledge for opencode, and
-re-injects it at compaction. It is **not published yet**, so there is no
-`opencode plugin` line to run — an opencode session gets the tools but not the
-guidance until it ships as a package.
+```jsonc
+// ~/.config/opencode/opencode.jsonc
+{
+  "skills": { "paths": ["~/.config/opencode/vorn/skills"] }
+}
+```
+
+The same `SKILL.md` files the other harnesses use — opencode discovers them
+through its own `skill` tool, so there is no plugin to install.
 
 **Gemini CLI** has no plugin system. Add the MCP server directly:
 
