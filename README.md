@@ -60,15 +60,18 @@ re-injects it at compaction. It is **not published yet**, so there is no
 `opencode plugin` line to run — an opencode session gets the tools but not the
 guidance until it ships as a package.
 
-**Gemini CLI** has no plugin system. Add the MCP server directly:
+**Gemini CLI**
 
 ```
-gemini mcp add -s user vorn npx -y @vornrun/mcp@latest
+gemini extensions install https://github.com/vorn-run/plugin
 ```
 
-No `--` separator: Gemini takes the command and its arguments positionally and
-rejects the separator form. `-s user` because it writes to project settings
-otherwise. Gemini also suppresses MCP servers in a folder it does not trust.
+The extension carries both the MCP server and the skills — Gemini has no skills
+system, so `GEMINI.md` includes all four skill files directly rather than loading
+them on demand.
+
+Gemini suppresses MCP servers, including user-level ones, in a folder it does not
+trust. If the server shows as `Disabled`, trust the folder or pass `--skip-trust`.
 
 ## What it installs
 

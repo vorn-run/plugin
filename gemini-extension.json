@@ -1,0 +1,12 @@
+{
+  "name": "vorn",
+  "version": "0.1.0",
+  "description": "Run coding agents inside Vorn with a browser pane, sibling-agent control, and workflow automation",
+  "contextFileName": "GEMINI.md",
+  "mcpServers": {
+    "vorn": {
+      "command": "npx",
+      "args": ["-y", "@vornrun/mcp@latest"]
+    }
+  }
+}
