@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "vorn": {
+      "command": "npx",
+      "args": ["-y", "@vornrun/mcp@latest"]
+    }
+  }
+}

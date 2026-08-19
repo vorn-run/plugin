@@ -1,0 +1,20 @@
+{
+  "name": "vorn",
+  "metadata": {
+    "description": "Teach a coding agent what it can do when it runs inside Vorn"
+  },
+  "owner": {
+    "name": "vorn-run",
+    "url": "https://github.com/vorn-run"
+  },
+  "plugins": [
+    {
+      "name": "vorn",
+      "version": "0.1.0",
+      "source": "./",
+      "description": "Run coding agents inside Vorn with a browser pane, sibling-agent control, and workflow automation",
+      "author": { "name": "vorn-run" },
+      "keywords": ["vorn", "orchestration", "browser", "agents", "workflows"]
+    }
+  ]
+}
