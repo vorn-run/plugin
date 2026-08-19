@@ -66,26 +66,32 @@ git clone https://github.com/vorn-run/plugin ~/.config/opencode/vorn
 The same `SKILL.md` files the other harnesses use — opencode discovers them
 through its own `skill` tool, so there is no plugin to install.
 
-**Gemini CLI** has no plugin system. Add the MCP server directly:
+**Gemini CLI**
 
 ```
-gemini mcp add -s user vorn npx -y @vornrun/mcp@latest
+gemini extensions install https://github.com/vorn-run/plugin
 ```
 
-No `--` separator: Gemini takes the command and its arguments positionally and
-rejects the separator form. `-s user` because it writes to project settings
-otherwise. Gemini also suppresses MCP servers in a folder it does not trust.
+The extension carries both the MCP server and the skills — Gemini has no skills
+system, so `GEMINI.md` includes all four skill files directly rather than loading
+them on demand.
+
+Gemini suppresses MCP servers, including user-level ones, in a folder it does not
+trust. If the server shows as `Disabled`, trust the folder or pass `--skip-trust`.
 
 ## What it installs
 
 | | |
 | --- | --- |
-| `.mcp.json` | the `vorn` MCP server (`@vornrun/mcp`) — 40+ tools |
+| `.mcp.json` | the `vorn` MCP server (`@vornrun/mcp`) — 67 tools |
 | `skills/vorn-browser` | driving the session browser pane |
+| `skills/vorn-device` | driving an iOS simulator |
 | `skills/vorn-orchestration` | launching, watching and steering other agents |
 | `skills/vorn-workflows` | building, running and debugging workflows |
 
-Skills load on demand, so they cost nothing until the agent needs them.
+On every harness with a skills system, these load on demand — about 324 tokens
+always-on, and roughly 1k more only when a skill actually fires. Gemini has no
+skills system, so its extension includes all four up front instead.
 
 ## Why skills and not a longer prompt
 
