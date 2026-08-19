@@ -111,8 +111,7 @@ summarised away.
 .codex-plugin/plugin.json    Codex manifest
 plugin.json                  Copilot CLI manifest
 .mcp.json                    MCP server definition
-skills/<name>/SKILL.md       shared by all three
-opencode/plugin.js           opencode: re-injects context at compaction
+skills/<name>/SKILL.md       shared by every harness
 ```
 
 Three manifests, one set of skills. Claude, Copilot and Codex all read
