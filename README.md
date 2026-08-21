@@ -52,7 +52,7 @@ Restart, or start a fresh session — bundled skills load at session start.
 `skills.paths` at a clone of this repo:
 
 ```
-opencode mcp add vorn -- npx -y @vornrun/mcp@latest
+opencode mcp add vorn -- npx -y @vornrun/mcp@0.6.1
 git clone https://github.com/vorn-run/plugin ~/.config/opencode/vorn
 ```
 
@@ -103,6 +103,18 @@ that; the tool list carries the names.
 
 Skill bodies are also re-injected after compaction, where prompt text is
 summarised away.
+
+## Why the server version is pinned
+
+`.mcp.json` asks for an exact `@vornrun/mcp` version rather than `@latest`.
+
+`@latest` reads whichever registry the machine is pointed at, and a mirror that
+has stopped syncing still answers -- it serves what it last fetched, under
+whatever tag it last saw. Nothing errors in that case: the server starts, the
+tools load, and the only symptom is a tool that should exist and does not. A
+pinned version turns silence into a failure you can read.
+
+Bump it deliberately when the server gains something the skills rely on.
 
 ## Requirements
 
