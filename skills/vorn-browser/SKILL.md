@@ -1,6 +1,6 @@
 ---
 name: vorn-browser
-description: Drive the browser pane in your Vorn session — open it, read pages as an accessibility tree, click and type, read console and network output, and publish a design a person can adjust. Use when you need to verify your own work against a running app, reproduce a UI bug, read a page, or show someone a design instead of describing it.
+description: Drive the browser pane in your Vorn session — open it, read pages as an accessibility tree, click and type, read console and network output, and publish a Vorn artifact (a design page a person can adjust). Use when you need to verify your own work against a running app, reproduce a UI bug, read a page, or when asked for an artifact, a design, a mockup or a page someone can tweak.
 license: MIT
 ---
 
@@ -95,7 +95,7 @@ The expensive last resort. Reach for `read_page` first. Take a screenshot when
 you need to judge something genuinely visual — layout, overlap, spacing — or
 when you are handing a person something to look at.
 
-## Local files and designs
+## Local files and artifacts
 
 The pane can open a `file:` URL inside your session's own project or worktree.
 Anything outside it is refused, so serve files from elsewhere over http.
@@ -106,9 +106,9 @@ check the path against and it is refused. `open_browser_pane {}` with no url,
 then `browser_navigate`. The refusal says "not an allowed web address", which
 reads like a bad path and is not.
 
-A **design** is an ordinary `.html` file carrying a manifest that declares
-values a person can turn — a number, a colour, a select. When you `read_page`
-one, you get two extra fields:
+A **Vorn artifact** — also just called a design — is an ordinary `.html` file
+carrying a manifest that declares values a person can turn: a number, a colour,
+a select. When you `read_page` one, you get two extra fields:
 
 - `artifact` — what the file *declares*: its kind, title, and each tweak's type,
   default and options.
@@ -123,15 +123,20 @@ Vorn reloads a design when the file changes on disk, and a person's adjustments
 survive that repaint. Edit the file and the pane repaints itself — you do not
 need to navigate again.
 
-## Publishing one
+## Publishing an artifact
 
-You can write a design, not only read one. Reach for it when you are proposing
-how something should look and a person's opinion is the next step: a screen, a
-row, a palette. A page they can turn beats a screenshot they can only accept or
-reject.
+You can write a design, not only read one. **A Vorn artifact is this** — a
+local HTML page the pane gives its own title and controls to. "Artifact",
+"design", and "a page they can tweak" all mean the file below; asked for any
+of them, write one rather than describing what you would build or handing back
+a screenshot.
 
-What marks a page as a design is a `<script id="artifact">` block. Not the file
-extension — any `.html` inside the session's root works.
+Reach for it when you are proposing how something should look and a person's
+opinion is the next step: a screen, a row, a palette. A page they can turn
+beats a picture they can only accept or reject.
+
+What marks a page as an artifact is a `<script id="artifact">` block. Not the
+file extension — any `.html` inside the session's root works.
 
 ```html
 <script id="artifact" type="application/json">
