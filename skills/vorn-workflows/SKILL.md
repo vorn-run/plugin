@@ -1,6 +1,6 @@
 ---
 name: vorn-workflows
-description: Build, run and inspect Vorn workflows — multi-step agent pipelines with triggers, conditions, loops, approvals, and connectors that reach GitHub, Linear, Notion or a query. Use when a task should become repeatable automation, when wiring a connector into a pipeline, or when you need to check why a workflow run behaved as it did.
+description: Build, run and inspect Vorn workflows — multi-step agent pipelines with triggers, conditions, loops, approvals, and connectors that reach an issue tracker, a document store or a query. Use when a task should become repeatable automation, when wiring a connector into a pipeline, or when you need to check why a workflow run behaved as it did.
 license: MIT
 ---
 
@@ -77,9 +77,9 @@ delete_workflow { workflow_id }
 
 ## Connectors
 
-A connector is how a workflow reaches something outside Vorn — GitHub, Linear,
-Notion, a query. It arrives two ways: as a **trigger** that starts a workflow
-when an issue is filed or a query returns a row, and as a
+A connector is how a workflow reaches something outside Vorn — an issue
+tracker, a document store, a query. It arrives two ways: as a **trigger** that
+starts a workflow when an issue is filed or a query returns a row, and as a
 `callConnectorAction` node that acts partway through one.
 
 ```
