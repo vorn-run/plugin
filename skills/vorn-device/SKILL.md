@@ -1,6 +1,8 @@
 ---
 name: vorn-device
 description: Drive an iOS simulator from your Vorn session — claim one, read the screen as an accessibility tree, tap and type, and read logs. Use when verifying an iOS app change, reproducing a bug on device, or walking a flow a user would walk.
+license: MIT
+compatibility: Requires macOS with Xcode installed. The Command Line Tools alone do not ship simctl.
 ---
 
 # Driving a simulator
@@ -110,3 +112,25 @@ screen where a person can see it.
 3. `read_screen` for refs, `device_interact` to walk the flow
 4. `device_logs` when something does not behave
 5. `device_release` when done
+
+## When it will not work
+
+**`xcrun: unable to find utility "simctl", not a developer tool or in PATH`**
+
+`xcode-select` is pointing at the Command Line Tools, which do not ship the
+simulator. Xcode itself is usually installed anyway — check with
+`xcode-select -p`, and if it prints `/Library/Developer/CommandLineTools`, run
+the tools with the real developer directory:
+
+```
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun simctl list devices
+```
+
+That override needs no sudo and changes nothing for anyone else. Repointing
+`xcode-select` for the whole machine is a person's decision, not yours — say
+what you found and let them make it.
+
+If a tool returns *"no Vorn session context (VORN_SESSION_ID is unset)"*, you are
+in a headless run or a session not started by the Vorn app. There is no device
+to claim and no way to make one. Do not retry — say so and carry on with the
+work you can do.
