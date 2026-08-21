@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "vorn",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "source": "./",
       "description": "Run coding agents inside Vorn with a browser pane, sibling-agent control, and workflow automation",
       "author": { "name": "vorn-run" },

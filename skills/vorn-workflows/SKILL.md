@@ -1,6 +1,7 @@
 ---
 name: vorn-workflows
-description: Build, run and inspect Vorn workflows — multi-step agent pipelines with triggers, conditions, loops and approvals. Use when a task should become repeatable automation, or when you need to check why a workflow run behaved as it did.
+description: Build, run and inspect Vorn workflows — multi-step agent pipelines with triggers, conditions, loops, approvals, and connectors that reach GitHub, Linear, Notion or a query. Use when a task should become repeatable automation, when wiring a connector into a pipeline, or when you need to check why a workflow run behaved as it did.
+license: MIT
 ---
 
 # Vorn workflows
@@ -74,6 +75,38 @@ update_workflow { workflow_id, ... }
 delete_workflow { workflow_id }
 ```
 
+## Connectors
+
+A connector is how a workflow reaches something outside Vorn — GitHub, Linear,
+Notion, a query. It arrives two ways: as a **trigger** that starts a workflow
+when an issue is filed or a query returns a row, and as a
+`callConnectorAction` node that acts partway through one.
+
+```
+list_connectors {}                          # what exists, and what each offers
+install_connector { connector_id, ... }     # creates a connection
+list_connector_actions { connection_id }    # actions, with input schemas
+run_connector_action { connection_id, action, args? }
+```
+
+**Actions belong to a connection, not to a connector.** A connector is the
+integration; a connection is one configured instance of it, with its own
+credentials and filters. Passing a connector id where a `connection_id` belongs
+fails — `list_connections` is where the ids you can actually use come from.
+
+Read `list_connectors` before assuming what is available: each entry carries its
+own triggers, actions, required environment variables, and how it authenticates.
+That answer is better than anything written here, because it reflects what this
+machine has.
+
+Call `list_connector_actions` before wiring a `callConnectorAction` node. The
+action name and its arguments come from there, and a node built on a guessed
+name fails at run time rather than at build time.
+
+Secrets are refused by `install_connector` on purpose: encryption lives in the
+desktop process, so a person enters them in Settings > Connectors. Everything
+else about a connector can be installed without them.
+
 ## Move one between machines
 
 ```
@@ -83,6 +116,20 @@ import_workflow { ... }           # resolved against a registered project
 
 Export rewrites absolute paths and local remote-host bindings so the file is
 portable — commit it beside the code it drives.
+
+## Gotchas
+
+- **`list_workflow_runs` needs one of its two arguments.** Both read as
+  optional, and calling it bare fails with "provide either workflow_id or
+  task_id".
+- **A contextual workflow cannot be exported.** Its nodes hold
+  `{{context.projectName}}`, which is not a registered project, so export has
+  nothing to make the paths relative to.
+- **Connector triggers do not appear in `list_workflows`.** They run as
+  workflows with ids like `connector:<connection>:<trigger>`, and only
+  `get_workflow_schedule { info: "log" }` shows them. Asked why a connector did
+  not fire, look there — `list_workflows` returning nothing is not evidence it
+  does not exist.
 
 ## Designing one that works
 

@@ -1,6 +1,7 @@
 ---
 name: vorn-orchestration
 description: Launch, watch and steer other agent sessions running in Vorn. Use when work can be parallelised, when you need a second agent on a different branch or worktree, or when you need to read or unblock a session that is already running.
+license: MIT
 ---
 
 # Running other agents
@@ -109,3 +110,15 @@ files, or when defining the task takes longer than doing it.
 
 Sessions you did not start belong to someone else — a person may be typing in
 one right now. Read freely; think before you write to one.
+
+## Gotchas
+
+- **`read_session_output` reads a terminal, not a transcript.** It returns a
+  rolling buffer with escape sequences stripped, so an agent that redraws in
+  place — a spinner, a status line, a TUI — comes back as overlapping fragments
+  on one line. That is what the screen genuinely contains, not corruption and
+  not a truncated read. Read it for the state a session is in; do not try to
+  reconstruct its history from it.
+- **`launch_session` returns once the session exists, not once it has done
+  anything.** The prompt is delivered to a terminal that may still be starting.
+  Give it a moment before reading output and concluding it ignored you.
