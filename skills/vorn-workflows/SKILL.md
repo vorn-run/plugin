@@ -58,7 +58,20 @@ create_workflow {
 ```
 
 Node types: `trigger`, `launchAgent`, `script`, `condition`, `approval`,
-`createTaskFromItem`, `callConnectorAction`.
+`createTaskFromItem`, `callConnectorAction`, `httpRequest`, `loop`.
+
+**Read the definitions before you write a node:**
+
+```
+describe_workflow_nodes { types? }   # e.g. ["loop", "callConnectorAction"]
+```
+
+It returns, for each node type, its `config` schema, the outputs later steps
+read as `{{steps.<slug>.<field>}}`, and the rules `create_workflow` checks —
+plus the edge schema, the limits, every template namespace, and a complete
+example workflow. `create_workflow` validates each node's `config` against the
+same schema, so a guessed field name is refused with its path rather than
+failing when the workflow runs.
 
 Three rules that are easy to miss:
 
@@ -74,6 +87,51 @@ Three rules that are easy to miss:
 update_workflow { workflow_id, ... }
 delete_workflow { workflow_id }
 ```
+
+## Loops
+
+A `loop` node owns the steps in its `bodyNodeIds` and runs them as a graph of
+their own, by their own edges — a condition inside a loop branches the way one
+outside does. Wire it like this:
+
+- `loop → ` each step that starts a pass (the body's entry steps)
+- edges between body steps, as anywhere else
+- the body's last steps `→` the step that follows the loop
+
+Two modes:
+
+- **`repeat`** (the default) runs the body up to `maxIterations` times, at most
+  10, stopping early when `until` holds — `{{steps.review.approved}} equals
+  true` is the shape it exists for.
+- **`forEach`** runs the body once for each item of `items`, a template naming
+  a list: `{{steps.gate.items}}`, `{{steps.fetch.issues}}`. There is no cap.
+  JSON text of a list works, and so does an object holding exactly one list.
+
+Steps inside a loop read `{{loop.item.<field>}}` (for-each), `{{loop.number}}`
+(from 1), `{{loop.index}}` (from 0) and `{{loop.count}}`. After the loop,
+`{{steps.<loop>.results}}` holds each pass — its item, status and every step's
+output — and `{{steps.<loop>.outputs}}` each pass's final output.
+
+A body cannot hold an approval gate, another loop or a trigger, and nothing
+outside the loop may feed a step inside it. A step that needs its connection
+to sign in again fails inside a loop rather than waiting.
+
+## Review gates
+
+An `approval` node's `edit` is text the reviewer may rewrite before approving.
+When it names a JSON list of records — findings, rows, drafts — the reviewer
+sees a table: they can drop rows and edit cells, or switch to the JSON. The
+gate then hands on `{{steps.<gate>.items}}`, the rows they kept, which is what
+a `forEach` loop wants:
+
+```
+review (headless agent, outputSchema with findings[])
+  → gate   (approval, edit: "{{steps.review.findings}}")
+  → loop   (forEach, items: "{{steps.gate.items}}")
+      → comment (callConnectorAction, args use {{loop.item.path}})
+```
+
+A rewrite that is no longer valid JSON is refused, with the line and column.
 
 ## Connectors
 
@@ -100,8 +158,11 @@ That answer is better than anything written here, because it reflects what this
 machine has.
 
 Call `list_connector_actions` before wiring a `callConnectorAction` node. The
-action name and its arguments come from there, and a node built on a guessed
-name fails at run time rather than at build time.
+action name and its arguments come from there. The node's config is
+`{ nodeType: "callConnectorAction", connectionId, action, args }`: `connectionId`
+from `list_connections`, and `args` a map of templates, e.g.
+`{ "body": "{{loop.item.body}}" }`. Its declared outputs are read as
+`{{steps.<slug>.<field>}}`.
 
 Secrets are refused by `install_connector` on purpose: encryption lives in the
 desktop process, so a person enters them in Settings > Connectors. Everything
@@ -119,9 +180,9 @@ portable — commit it beside the code it drives.
 
 ## Gotchas
 
-- **`list_workflow_runs` needs one of its two arguments.** Both read as
-  optional, and calling it bare fails with "provide either workflow_id or
-  task_id".
+- **`list_workflow_runs` with neither argument lists only runs parked on an
+  approval gate**, each waiting node saying what it asks. Pass `workflow_id` or
+  `task_id` for a workflow's history.
 - **A contextual workflow cannot be exported.** Its nodes hold
   `{{context.projectName}}`, which is not a registered project, so export has
   nothing to make the paths relative to.
