@@ -160,6 +160,50 @@ read_artifact_comments { artifactId, version? }
 read_artifact { artifactId, version? }
 ```
 
+### Make it worth reviewing
+
+A person judges what is on the page, so a rough page gets rough feedback. Match
+the treatment to the job: a plan or a review page is plain and well set; a
+screen proposal looks like the product it belongs to.
+
+- **Use the project's own system first.** Look for a theme or tokens file, a
+  Tailwind config or existing components, and take the real palette, type scale,
+  radius and spacing from there. Only fill the gaps yourself.
+- **Real content, never lorem.** Real names, numbers, branch names and
+  timestamps from the repo or the running app. Carry at least one detail only
+  this subject has: its units, its terms, its document conventions.
+- **Show the page at rest.** Everything meant to be read is visible on load,
+  never parked at `opacity: 0` waiting for a scroll. A tool opens in a working
+  state with example data, not an empty shell.
+- **Structure should mean something.** Numbering, labels and dividers encode
+  what is true of the content. Number steps only when order matters.
+- **Not everything is a card.** Border, fill, radius and shadow each say
+  "separate object". Spend them where one thing needs lifting, not on every
+  block.
+- **Compose repeated things as one.** Rows and cards share edges, baselines
+  and padding. Use flex or grid with `gap`, not margins per element. Keep
+  tabular numbers (`font-variant-numeric: tabular-nums`) where digits line up.
+- **Type carries the page.** Pick a type scale and stay on it. Keep running text
+  near 65 characters wide, and use `text-wrap: balance` on headings. Since
+  nothing loads from the network, use system stacks or fonts inlined as data
+  URIs.
+- **Both themes, from one set of tokens.** Define colours as variables on
+  `:root`, redefine them under `prefers-color-scheme: dark`, and give `body` an
+  explicit background.
+- **It must hold at phone width.** Keep a gutter of at least 16px; rows wrap or
+  stack; only tables, code and diagrams scroll sideways, each in its own
+  container.
+- **Charts are drawn to the scale.** One scale places marks, ticks and labels.
+  Every label names a value the chart reaches, and nothing overlaps or clips.
+- **Avoid the generated look.** Warm cream with a serif and a terracotta accent,
+  near-black with one neon pop, purple-to-blue gradients, emoji as section
+  markers, everything centred, the same large radius on every box. Where the
+  project or the person names a direction, follow it instead.
+- **Name it like a product.** The `title` is a short name, two to four words,
+  specific to the subject. No explainer after a dash; put that in the page.
+- **Words are design material.** Write from the reader's side of the screen:
+  controls say exactly what they do, errors say how to fix them.
+
 ### Designs
 
 A `<script id="artifact">` block marks a design. Its `kind` must be `design`.
