@@ -2,7 +2,7 @@
   "mcpServers": {
     "vorn": {
       "command": "npx",
-      "args": ["-y", "@vornrun/mcp@0.7.3"]
+      "args": ["-y", "@vornrun/mcp@0.7.5"]
     }
   }
 }

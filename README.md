@@ -52,7 +52,7 @@ Restart, or start a fresh session — bundled skills load at session start.
 `skills.paths` at a clone of this repo:
 
 ```
-opencode mcp add vorn -- npx -y @vornrun/mcp@0.7.3
+opencode mcp add vorn -- npx -y @vornrun/mcp@0.7.5
 git clone https://github.com/vorn-run/plugin ~/.config/opencode/vorn
 ```
 
@@ -83,7 +83,7 @@ trust. If the server shows as `Disabled`, trust the folder or pass `--skip-trust
 
 | | |
 | --- | --- |
-| `.mcp.json` | the `vorn` MCP server (`@vornrun/mcp`) — 68 tools |
+| `.mcp.json` | the `vorn` MCP server (`@vornrun/mcp`) — 73 tools |
 | `skills/vorn-browser` | driving the session browser pane |
 | `skills/vorn-device` | driving an iOS simulator |
 | `skills/vorn-orchestration` | launching, watching and steering other agents |
