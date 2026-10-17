@@ -44,7 +44,7 @@ An accessibility tree, not pixels. Elements carry a `ref` you pass to
 something you can act on.
 
 ```
-device_find { text }           # search the whole screen, not just page one
+device_find { text, limit? }   # search the whole screen, not just page one
 ```
 
 `read_screen` paginates; `device_find` searches everything. When you know what
@@ -53,10 +53,13 @@ you are looking for, find is the shorter path.
 ## Act
 
 ```
-device_interact { action, ref?, x?, y?, text?, to_x?, to_y?, duration? }
+device_interact { action, ref?, x?, y?, text?, to_x?, to_y?, duration?, orientation?, system_gesture? }
 ```
 
-`action` is one of `tap`, `swipe`, `type`, `button`, `press` (long press).
+`action` is one of `tap`, `swipe`, `type`, `button`, `press` (long press,
+`duration` in seconds) or `rotate`. `button` takes its name in `text`: `HOME`,
+`LOCK`, `SIRI`, `SIDE_BUTTON`. `rotate` takes `orientation`: `portrait`,
+`portrait-upside-down`, `landscape-left`, `landscape-right`.
 
 Two things that will bite you if you skim:
 
@@ -82,14 +85,14 @@ device_open_url { url }        # web URL, or a custom scheme to test deep links
 ## Diagnose
 
 ```
-device_logs { limit? }         # captured since you claimed the device
+device_logs { limit? }         # captured since you claimed the device (default 100)
 ```
 
 Logs capture from the moment of the claim, so claim *before* the action you want
 to observe.
 
 ```
-device_screenshot { max_edge? }
+device_screenshot { max_edge? }   # reports the scale factor to divide by
 ```
 
 The expensive last resort, same as on the browser side. Reach for `read_screen`
@@ -99,7 +102,7 @@ overlap, rendering — or when handing a person something to look at.
 ## Let a person watch
 
 ```
-open_device_pane {}
+open_device_pane { udid? }     # defaults to the one you claimed
 ```
 
 Optional. Every device tool works with the pane closed; this only puts the

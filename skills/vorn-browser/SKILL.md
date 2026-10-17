@@ -45,13 +45,13 @@ far cheaper than a screenshot and it gives you handles you can act on.
 When you already know what you are looking for, skip the full read:
 
 ```
-browser_find { text }        # matches accessible name, cheaper than read_page
+browser_find { text, limit? }   # matches accessible names, cheaper than read_page
 ```
 
 To read prose rather than act on it:
 
 ```
-get_page_text {}             # visible text of the pane
+get_page_text { cursor? }       # visible text; long pages paginate with nextCursor
 ```
 
 ## Act
@@ -74,8 +74,8 @@ browser_interact { action, ref?, x?, y?, text?, delta_y? }
 ## Diagnose
 
 ```
-read_console_messages {}     # console output since the pane opened
-read_network_requests {}     # requests since the pane opened
+read_console_messages { limit? }   # console output since the pane opened (default 50)
+read_network_requests { limit? }   # requests since the pane opened (default 50)
 ```
 
 Both capture from when the pane opened, so open the pane *before* the action you
@@ -88,7 +88,7 @@ before you start editing code on a hunch.
 ## Screenshot last
 
 ```
-browser_screenshot {}
+browser_screenshot { full_page? }
 ```
 
 The expensive last resort. Reach for `read_page` first. Take a screenshot when
@@ -124,7 +124,9 @@ survive that repaint.
 ## Publishing an artifact
 
 When a person's opinion is the next step, publish the work as an artifact rather
-than describing it or handing back a screenshot. It opens in your pane under its
+than describing it or handing back a screenshot. Artifacts are a built-in
+extension; when a person has switched it off in Settings › Extensions, agents
+cannot publish. It opens in your pane under its
 own title, with versions. The person comments on the exact words, or pins a
 comment on a design, and sends every comment back to you as one message.
 
@@ -256,12 +258,13 @@ A design with no artboards is one page, with its tweaks in the pane's bar.
 ## Tabs
 
 ```
-browser_tabs { action, index? }   # add, close, select
-browser_history { direction }     # back or forward, like the pane's buttons
+browser_tabs { action, index?, url? }   # list, add (url), close, select (index)
+browser_history { direction }           # back or forward, like the pane's buttons
 ```
 
-`browser_tabs` close and select take a zero-based index — call `list` first, since
-a tab that followed a link is no longer on the page it was opened with.
+`close` and `select` take a zero-based index — call `list` first, since a tab
+that followed a link is no longer on the page it was opened with. Closing the
+last tab closes the pane.
 
 ## The loop that pays off
 

@@ -1,124 +1,112 @@
 ---
 name: vorn-orchestration
-description: Launch, watch and steer other agent sessions running in Vorn. Use when work can be parallelised, when you need a second agent on a different branch or worktree, or when you need to read or unblock a session that is already running.
+description: Split work across several agent sessions in Vorn and steer them — start agents on their own worktrees, watch their status, answer what they ask, and review what they produce. Use when work can be parallelised, when you need a second agent on a different branch, or when you need to read or unblock a session that is already running.
 license: MIT
 ---
 
 # Running other agents
 
-Vorn is an orchestrator. You are one session in it, and you can start and drive
-others. Use this when work splits cleanly — not to hand off work you could
-finish yourself in less time than the handoff costs.
+Vorn runs many agent sessions side by side. You are one of them, and you can
+start and steer others. Do it when the work splits cleanly — not to hand off
+work you could finish faster than the handoff costs.
+
+The mechanics of each command are in vorn-terminals; this is how to use them
+together.
 
 ## See what is running
 
 ```
-list_sessions { status? }        # "active" (running) or "recent" (past)
+list_sessions { filter?: "active" | "recent", project_name?, project_path? }
+get_my_context { cwd?, task_id? }     # your project, and the task you are on
 ```
 
-Returns each session's `id`, `agentType`, `projectName`, `status`, `branch` and
-`pid`. `status` is the field that matters: `running` means the agent is mid-turn,
-`idle` means it is waiting for input.
+Active sessions come back with `id`, `agentType`, `projectName`, `status`,
+`displayName`, `branch` and `pid`. `status` is the field that matters:
+`running` (mid-turn), `waiting` (asking something), `idle` (turn ended),
+`error`. From a shell: `vorn session list --json`.
 
 ## Start one
 
 ```
 launch_session {
-  agent_type,      # claude | copilot | codex | opencode | gemini
+  agent_type,      # an agent switched on: claude, copilot, codex, opencode, gemini…
   project_name,
   project_path,    # absolute
   prompt?,
   branch?,
-  use_worktree?,   # true = isolated git worktree
+  use_worktree?,   # true = its own git worktree
   display_name?,
-  headless?        # true = no UI, runs to completion
+  headless?        # true = no terminal, runs to completion
 }
 ```
 
-`agent_type`, `project_name` and `project_path` are required; the rest are
-optional. Requires the Vorn app to be running.
-
-**Pass `use_worktree: true` whenever the new session will edit files.** Two
-agents writing the same working tree will clobber each other. A worktree gives it
-an isolated checkout on its own branch.
-
-**Choose interactive or headless deliberately:**
-
-- `headless: true` — runs to completion and exits. Right for a bounded task you
-  want a result from. It has no UI and **no browser pane**.
-- interactive (default) — a terminal session a person can watch and take over.
-  Right for open-ended work.
-
-Give a `display_name`. A grid of sessions called `claude` helps nobody.
-
-## Watch it
-
-```
-read_session_output { id, lines? }
+```bash
+vorn session start --agent copilot --worktree --name api-tests \
+  --prompt "add tests for the /orders endpoint; do not touch src/ui"
 ```
 
-Reads the session's terminal output from a rolling 1000-line buffer with ANSI
-codes stripped. This is a real read of another agent's screen — use it to see
-whether it is making progress, stuck, or waiting on a prompt.
+- **Pass `use_worktree: true` (`--worktree`) whenever it will edit files.** Two
+  agents in one working tree clobber each other.
+- **Headless** runs to completion with no terminal and no browser pane: right
+  for a bounded task you want a result from. **Interactive** (default) is a
+  terminal a person can watch and take over: right for open-ended work.
+- **Name it.** A grid of sessions called `claude` helps nobody.
+- An agent that is switched off is refused, and the error lists the ones that
+  are on.
 
+## Watch without burning turns
+
+Prefer waiting on status to polling output:
+
+```bash
+vorn session wait api-tests --status idle --timeout 30m
+vorn session wait api-tests --status blocked    # it is asking you something
+vorn events --json --filter session.status --session api-tests
 ```
-list_session_events {}    # created / exited / renamed, for post-mortems
-```
+
+From MCP, `read_session_output { id, lines? }` reads its screen and
+`list_session_events { session_id?, event_type?, limit? }` gives created,
+exited and renamed events for a post-mortem.
 
 ## Steer it
 
-```
-write_to_terminal { id, data, raw? }
-```
-
-Sends input to a running session, as if typed. A carriage return is appended
-unless `raw: true`. Use it to answer a question the agent is blocked on, or to
-redirect it.
+Read first, so you answer the question actually on screen:
 
 ```
-send_key { id, key }
+read_session_output { id, lines: 60 }
+write_to_terminal { id, data }       # typed, Enter appended unless raw: true
+send_key { id, key }                 # one key, no Enter: "1", "y", "escape", "ctrl+c"
 ```
 
-Sends a single keystroke or combo **without** Enter — for TUI interaction:
-menu selections (`1`, `2`, `y`, `n`), arrows, `Escape`.
-
-Read before you write. `read_session_output` first, so you are answering the
-question actually on screen rather than the one you assume is.
-
-```
-kill_session { id }
-rename_session { id, display_name }
-reorder_sessions { ids }
-```
+`kill_session { id, headless? }`, `rename_session { id, display_name }` and
+`reorder_sessions { session_ids }` tidy up.
 
 ## A working pattern
 
 1. Split the work into parts that do not touch the same files.
-2. `launch_session` each with `use_worktree: true` and a clear `prompt`.
-3. Poll `read_session_output` rather than blocking — check, do your own work,
-   check again.
-4. When one goes `idle` mid-task, read its output: it is usually asking
-   something. Answer with `write_to_terminal`.
+2. Start each with a worktree, a name and a prompt that says what is out of
+   bounds.
+3. Wait on `--status idle` or `blocked` rather than reading in a loop; do your
+   own part meanwhile.
+4. When one is `waiting`, read its screen and answer.
 5. Review each result yourself before merging. You are accountable for what the
    agents you started produce.
 
 ## Judgement
 
-Delegate when the parts are genuinely independent and each is big enough to be
-worth the setup. Do it yourself when the work is small, when the parts share
-files, or when defining the task takes longer than doing it.
+Delegate when the parts are independent and each is big enough to be worth the
+setup. Do it yourself when the work is small, the parts share files, or
+defining the task takes longer than doing it.
 
 Sessions you did not start belong to someone else — a person may be typing in
-one right now. Read freely; think before you write to one.
+one now. Read freely; think before you write to one.
 
 ## Gotchas
 
-- **`read_session_output` reads a terminal, not a transcript.** It returns a
-  rolling buffer with escape sequences stripped, so an agent that redraws in
-  place — a spinner, a status line, a TUI — comes back as overlapping fragments
-  on one line. That is what the screen genuinely contains, not corruption and
-  not a truncated read. Read it for the state a session is in; do not try to
-  reconstruct its history from it.
-- **`launch_session` returns once the session exists, not once it has done
-  anything.** The prompt is delivered to a terminal that may still be starting.
-  Give it a moment before reading output and concluding it ignored you.
+- **Output is a screen, not a transcript.** Spinners and redraws come back as
+  overlapping fragments. Read it for state, not history.
+- **Starting returns before the agent has done anything.** The prompt reaches a
+  terminal that may still be loading; wait for a status before concluding it
+  ignored you.
+- **A headless session has no terminal**: you cannot type into it, only wait for
+  it and read what it kept.
