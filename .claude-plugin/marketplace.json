@@ -10,11 +10,11 @@
   "plugins": [
     {
       "name": "vorn",
-      "version": "0.5.1",
+      "version": "0.6.0",
       "source": "./",
-      "description": "Run coding agents inside Vorn with a browser pane, sibling-agent control, and workflow automation",
+      "description": "Teach coding agents to use Vorn 0.8: terminals and sessions, other agents, the browser pane, iOS simulators, workflows, connectors, extensions and agent adapters",
       "author": { "name": "vorn-run" },
-      "keywords": ["vorn", "orchestration", "browser", "agents", "workflows"]
+      "keywords": ["vorn", "orchestration", "terminals", "browser", "agents", "workflows", "connectors", "extensions"]
     }
   ]
 }

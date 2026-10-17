@@ -1,12 +1,12 @@
 {
   "name": "vorn",
-  "version": "0.5.1",
-  "description": "Run coding agents inside Vorn with a browser pane, sibling-agent control, and workflow automation",
+  "version": "0.6.0",
+  "description": "Teach coding agents to use Vorn 0.8: terminals and sessions, other agents, the browser pane, iOS simulators, workflows, connectors, extensions and agent adapters",
   "contextFileName": "GEMINI.md",
   "mcpServers": {
     "vorn": {
       "command": "npx",
-      "args": ["-y", "@vornrun/mcp@0.7.5"]
+      "args": ["-y", "@vornrun/mcp@0.8.0-beta.14"]
     }
   }
 }
