@@ -10,11 +10,6 @@ A workflow is one trigger and a graph of steps that Vorn's server runs — with
 or without the app open. Reach for one when a sequence is worth repeating, and
 gate it with checks rather than an agent's opinion.
 
-> **Version note.** TOML workflow files, a script's `json` output and parallel
-> loops are in the next Vorn build, not in 0.8.0-beta.14. Until then Vorn reads
-> `.kdl` workflow files; `vorn workflow --help` names the extension `check`
-> takes on the build you have.
-
 ## Where a workflow lives
 
 - **A file in its project**: every `.toml` in `<project>/.vorn/workflows/`.

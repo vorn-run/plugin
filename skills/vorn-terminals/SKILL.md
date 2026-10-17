@@ -125,7 +125,9 @@ A layout is a TOML file in `~/.vorn/layouts/` (or one an extension ships with
 ```toml
 name = "dev"
 project = "web"
+view = "flexible"        # or "grid" (with columns = 1..4) or "tabs"
 split = "horizontal"
+ratio = 0.6
 
 [[children]]
 agent = "claude"
@@ -147,12 +149,16 @@ url = "http://localhost:3000"
 ```bash
 vorn layout list
 vorn layout open dev [--project <name or path>]   # prints the new session ids
-vorn layout save dev [--project …] [--force]      # the project's open sessions, in order
+vorn layout save dev [--project …] [--force]      # the project's open sessions, in the view shown, with its splits
 vorn layout check ~/.vorn/layouts/dev.toml        # every mistake as file:line: message
 ```
 
-Sessions open in tree order. Split direction and ratio are kept but do not size
-cards. A `command` runs in a shell that stays open after it ends. A `pane` opens
+Sessions open in tree order, shown by `view`: `flexible` lays the cards out as
+resizable split panes, each split's direction and `ratio` as written; `grid`
+puts them in rows of `columns` (automatic without it; `columns` goes only with
+`grid`); `tabs` shows one at a time. Without `view`, a layout with a split opens
+flexible, `columns` alone means grid, and a single session leaves the view as
+it is. A `command` runs in a shell that stays open after it ends. A `pane` opens
 beside the session before it and needs the app open.
 
 ## Report a program's status (OSC 7501)

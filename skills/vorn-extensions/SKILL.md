@@ -159,10 +159,12 @@ the prefix `storage.prefix` returns — the id escaped, so `acme.exits` owns
 
 ## UI
 
-### Element tree (the model going forward)
+### Element tree (the one model)
 
-> On the open element-tree change, not yet in a released build: a **settings
-> page** can be drawn from a tree. Until it lands, use a template.
+The element tree is how extension UI is drawn, on the desktop, in the browser
+and in cells. Today a tree draws a **settings page**; Worktrees and
+Connections are built that way. Every other point still takes a template
+(below) until the tree reaches it.
 
 ```toml
 [[contributes.settings]]
@@ -199,9 +201,10 @@ schema; a tree that fails is refused with its errors.
 
 ### Templates (frozen)
 
-KDL templates (`vorn:view@1`, files under `views/`) are frozen and will go
-away, but on current builds they are the only way to draw every point other
-than a tree settings page. A template declares the rows it reads and draws
+KDL templates (`vorn:view@1`, files under `views/`) are frozen: no new nodes
+or features, and support will be removed. For now they are the only way to
+draw every point other than a tree settings page; use a tree wherever one
+works. A template declares the rows it reads and draws
 them; the program fills them with `host.publish`:
 
 ```kdl
@@ -257,7 +260,7 @@ output?, logs?, error?, structuredOutput?}`. A trigger type is
 `[[contributes.triggers]]` with `timing = "cron"|"once"|"webhook"`, or fired by
 the program with `host.call("workflow.fire", …)` (`workflows.write`).
 `[[contributes.workflows]] file = "workflows/x.toml"` ships a workflow, added
-once at install (`.kdl` on builds before TOML workflows).
+once at install.
 
 ## Develop, pack, ship
 
@@ -300,8 +303,8 @@ Settings › Extensions › Install from a repository.
 - **An MCP tool needs a `[service]`**, and its description is what an agent
   reads to pick it; make it say when to use it.
 - **`vorn ext pack` refuses `agent = [...]` naming anything but `shell`** in
-  `[activates]` or `when` (0.8.0-beta.14): the command does not load the
-  agent adapters. `vorn ext link` checks it against the running server.
+  `[activates]` or `when` (through 0.8.0-beta.15): the command does not
+  load the agent adapters. `vorn ext link` checks it against the running server.
 - **A list that selects needs an `id`**; the tree check refuses one without.
 - **Built-in-only methods** (`task.importItems`, `workflow.seed`, `inbox.*`,
   `signin.*`…) are refused for installed extensions.

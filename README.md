@@ -59,7 +59,7 @@ Restart, or start a fresh session — bundled skills load at session start.
 `skills.paths` at a clone of this repo:
 
 ```
-opencode mcp add vorn -- npx -y @vornrun/mcp@0.8.0-beta.14
+opencode mcp add vorn -- npx -y @vornrun/mcp@0.8.0-beta.15
 git clone https://github.com/vorn-run/plugin ~/.config/opencode/vorn
 ```
 
