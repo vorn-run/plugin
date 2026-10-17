@@ -1,209 +1,266 @@
 ---
 name: vorn-workflows
-description: Build, run and inspect Vorn workflows — multi-step agent pipelines with triggers, conditions, loops, approvals, and connectors that reach an issue tracker, a document store or a query. Use when a task should become repeatable automation, when wiring a connector into a pipeline, or when you need to check why a workflow run behaved as it did.
+description: Write, run and debug Vorn workflows — repeatable pipelines of agents, scripts, conditions, loops, approval gates and connector actions, kept as TOML files in the project's .vorn/workflows folder or built through MCP. Use when a task should become repeatable automation, when adding a gate a person approves, when wiring a connection into a pipeline, or when you need to find out why a run behaved as it did.
 license: MIT
 ---
 
 # Vorn workflows
 
-A workflow is a graph of nodes Vorn executes: agents, scripts, conditions,
-approvals. Reach for one when a sequence is worth repeating — otherwise just do
-the work.
+A workflow is one trigger and a graph of steps that Vorn's server runs — with
+or without the app open. Reach for one when a sequence is worth repeating, and
+gate it with checks rather than an agent's opinion.
 
-## Look before you build
+## Where a workflow lives
+
+- **A file in its project**: every `.toml` in `<project>/.vorn/workflows/`.
+  Vorn watches the folder, runs what it finds, and writes editor changes back,
+  keeping comments. Delete the file and the workflow goes. **Save to project**
+  in a workflow's menu turns a stored one into a file.
+- **Stored in Vorn**: made in the editor or with `create_workflow`.
+
+Prefer a file for anything a project depends on: it is reviewed and versioned
+with the code.
+
+## A file
+
+```toml
+# Triage open issues: an agent reads each, a person approves the plans.
+name = "Triage issues"
+id = "triage-issues"
+enabled = true
+
+[trigger]
+id = "start"
+type = "manual"
+
+[[trigger.inputs]]
+key = "repo"
+label = "Repository"
+type = "text"
+required = true
+
+[[step]]
+id = "fetch"
+type = "script"
+slug = "fetch"
+scriptType = "bash"
+scriptContent = """
+gh issue list --repo {{inputs.repo}} --state open --limit 20 --json number,title,body --jq '{items: .}'
+"""
+
+[[step]]
+id = "any"
+type = "condition"
+variable = "{{steps.fetch.json.items.length}}"
+operator = "notEquals"
+value = "0"
+
+[[step]]
+id = "each"
+type = "loop"
+slug = "each"
+needs = ["any:true"]
+mode = "forEach"
+items = "{{steps.fetch.json.items}}"
+bodyNodeIds = ["triage"]
+parallel = true
+concurrency = 3
+
+[[step]]
+id = "triage"
+type = "launchAgent"
+slug = "triage"
+agentType = "claude"
+headless = true
+projectName = { "@project-name" = "app" }
+projectPath = { "@project" = "." }
+prompt = "Issue #{{loop.item.number}}: {{loop.item.title}}\n\n{{loop.item.body}}\n\nPlan a fix in two lines."
+
+[[step]]
+id = "approve"
+type = "approval"
+slug = "approve"
+message = "Plans, one per issue:\n{{steps.each.outputs}}"
+```
+
+- A step has `id`, `type`, `label`, `slug`, `onError`, `x`, `y`, `needs`, and
+  beside them its settings (what the editor's panel shows).
+- A step runs after the one before it unless it says what it `needs`. Several
+  ids wait for all. `"any:true"` / `"any:false"` follow a condition's branch;
+  `needs = []` starts a step with nothing before it.
+- Multi-line text goes in `"""`; use `'''` when it holds backslashes.
+- Portable references: `{ "@project" = "src/app" }` is a path in the file's
+  project, `{ "@project" = "." }` the project itself, `{ "@project-name" = "web" }`
+  its name, and `connectionId = { "@connection" = "eng-tracker" }` a connection
+  by name, so the file runs against whoever's connection has that name.
+- TOML has no null: `{ "@json" = "null" }`. Keys starting with `@` are the
+  format's own.
+
+Check a file before you rely on it:
+
+```bash
+vorn workflow check .vorn/workflows/*.toml
+# triage.toml:14:1: needs `fetch`, which no step here is
+```
+
+It names each mistake by file, line and column, the step types and connections
+this machine lacks, and hints at misspelt step fields. Exits 1 on any mistake.
+
+## Steps and triggers
+
+Every step and trigger type is declared by an extension. What a fresh install
+has:
+
+| From | Steps | Triggers |
+| --- | --- | --- |
+| the engine | `condition`, `approval`, `loop` | |
+| Workflow steps and triggers (built-in) | `launchAgent`, `script`, `httpRequest` | `manual`, `recurring` (cron), `once`, `sessionRestored`, `webhook` |
+| Tasks (built-in) | `createTaskFromItem` | `taskCreated`, `taskStatusChanged` |
+| Connectors (built-in) | `callConnectorAction` | `connectorPoll` |
+
+Built-ins can be switched off in Settings › Extensions. A step whose extension
+is off fails with a message naming the extension to turn on; the workflow is
+kept. Installed extensions add types of their own (vorn-extensions), each run
+by calling the extension with the step's filled-in config.
+
+Read the schema rather than guessing a field:
 
 ```
-list_workflows {}                          # optionally by workspace
-list_workflow_runs { workflow_id? , task_id? }
-get_workflow_schedule { workflow_id }      # execution log or next run
+describe_workflow_nodes { types?: ["loop", "approval"] }
 ```
 
-`list_workflow_runs` is the tool for "why did that behave that way." Each run
-carries `status`, `startedAt`, `completedAt`, the `inputs` it ran with, and a
-`nodeStates` array with per-node status. Read that before you theorise.
+It returns each core type's config schema, outputs, the rules the checker
+enforces, the edge schema, limits, template namespaces and a full example.
 
-## Run one
+## Templates
 
-```
-execute_workflow { workflow_id, inputs? }
-stop_workflow_run { run_id }
-```
+`{{namespace.path}}` anywhere a setting takes text:
 
-`inputs` supplies values for the parameters the workflow declares on its trigger
-node; declared defaults fill in the rest.
+- `{{steps.<slug>.<field>}}` — an earlier step's output (give the step a `slug`)
+- `{{inputs.<key>}}` — a manual run's inputs
+- `{{task.title}}`, `.description`, `.branch`… — the task a task trigger fired for
+- `{{trigger.*}}` — status change, restore, or a webhook's body, headers, query
+- `{{connectorItem.title}}`, `.body`, `.externalId`, `.externalUrl`
+- `{{context.cwd}}`, `.projectPath`, `.branch`, `.worktreePath` — a contextual run
+- `{{loop.item}}`, `{{loop.item.<field>}}`, `{{loop.index}}` (0-based),
+  `{{loop.number}}` (1-based), `{{loop.count}}` — inside a loop only
 
-## Build one
+**Typed agent output.** A headless `launchAgent` with an `outputSchema` (JSON
+Schema) returns each top-level property as `{{steps.<slug>.<field>}}`; a
+`condition` can then test `{{steps.review.approved}} equals true`. Without a
+schema you get text.
 
-`create_workflow` takes **either** shape:
-
-**Flat** — a trigger plus a list of actions. Use this for a straight line:
-
-```
-create_workflow {
-  name,
-  trigger,
-  actions: [ ... ]
-}
-```
-
-**Full** — `nodes` and `edges`, for anything with a branch, loop or approval:
-
-```
-create_workflow {
-  name,
-  nodes: [...],
-  edges: [...],
-  icon?, icon_color?, enabled?, stagger_delay_ms?
-}
-```
-
-Node types: `trigger`, `launchAgent`, `script`, `condition`, `approval`,
-`createTaskFromItem`, `callConnectorAction`, `httpRequest`, `loop`.
-
-**Read the definitions before you write a node:**
-
-```
-describe_workflow_nodes { types? }   # e.g. ["loop", "callConnectorAction"]
-```
-
-It returns, for each node type, its `config` schema, the outputs later steps
-read as `{{steps.<slug>.<field>}}`, and the rules `create_workflow` checks —
-plus the edge schema, the limits, every template namespace, and a complete
-example workflow. `create_workflow` validates each node's `config` against the
-same schema, so a guessed field name is refused with its path rather than
-failing when the workflow runs.
-
-Three rules that are easy to miss:
-
-- **Give a node a `slug`** to reference its output downstream as
-  `{{steps.<slug>.<field>}}`.
-- **A headless `launchAgent` with an `outputSchema` returns typed fields**, which
-  is what makes a downstream `condition` node able to test them. Without a
-  schema you get text, and the condition has nothing to read.
-- **Wire condition outcomes** with an edge `conditionBranch` of `"true"` or
-  `"false"`. A condition node with unlabelled edges does not branch.
-
-```
-update_workflow { workflow_id, ... }
-delete_workflow { workflow_id }
-```
+**A script's JSON.** When everything a script prints is one JSON value, read
+into it: `{{steps.fetch.json.items}}`, `.json.items.0.title`,
+`.json.items.length`. `{{steps.fetch.output}}` stays the raw text. Colours are
+stripped first, so `jq` output works.
 
 ## Loops
 
-A `loop` node owns the steps in its `bodyNodeIds` and runs them as a graph of
-their own, by their own edges — a condition inside a loop branches the way one
-outside does. Wire it like this:
+A `loop` owns the steps in `bodyNodeIds`. Wire it: loop → the body's entry
+steps, body steps to each other, the body's last steps → the step after.
 
-- `loop → ` each step that starts a pass (the body's entry steps)
-- edges between body steps, as anywhere else
-- the body's last steps `→` the step that follows the loop
+- `mode = "repeat"` runs up to `maxIterations` (1–10), stopping early when
+  `until` holds.
+- `mode = "forEach"` runs once per item of `items`, a template naming a list.
+  No cap.
+- `parallel = true` (forEach only) runs items side by side, `concurrency` at a
+  time (default 4, max 16). Each item shows as its own row ("Triage · item 3").
+  Results keep list order; one failing item stops the ones not yet started.
+  `until` is not allowed.
 
-Two modes:
+After the loop: `{{steps.<loop>.results}}` (per pass: item, status, every
+step's output) and `{{steps.<loop>.outputs}}` (each pass's last output). A body
+cannot hold an approval, a trigger or another loop, and nothing outside may
+point into it. A failing body step ends the loop unless it has
+`onError = "continue"`.
 
-- **`repeat`** (the default) runs the body up to `maxIterations` times, at most
-  10, stopping early when `until` holds — `{{steps.review.approved}} equals
-  true` is the shape it exists for.
-- **`forEach`** runs the body once for each item of `items`, a template naming
-  a list: `{{steps.gate.items}}`, `{{steps.fetch.issues}}`. There is no cap.
-  JSON text of a list works, and so does an object holding exactly one list.
+## Approval gates
 
-Steps inside a loop read `{{loop.item.<field>}}` (for-each), `{{loop.number}}`
-(from 1), `{{loop.index}}` (from 0) and `{{loop.count}}`. After the loop,
-`{{steps.<loop>.results}}` holds each pass — its item, status and every step's
-output — and `{{steps.<loop>.outputs}}` each pass's final output.
+An `approval` pauses the run until a person decides — in the app, beside agents
+asking for permission, or through `resolve_gate`.
 
-A body cannot hold an approval gate, another loop or a trigger, and nothing
-outside the loop may feed a step inside it. A step that needs its connection
-to sign in again fails inside a loop rather than waiting.
-
-## Review gates
-
-An `approval` node's `edit` is text the reviewer may rewrite before approving.
-When it names a JSON list of records — findings, rows, drafts — the reviewer
-sees a table: they can drop rows and edit cells, or switch to the JSON. The
-gate then hands on `{{steps.<gate>.items}}`, the rows they kept, which is what
-a `forEach` loop wants:
-
-```
-review (headless agent, outputSchema with findings[])
-  → gate   (approval, edit: "{{steps.review.findings}}")
-  → loop   (forEach, items: "{{steps.gate.items}}")
-      → comment (callConnectorAction, args use {{loop.item.path}})
-```
-
-A rewrite that is no longer valid JSON is refused, with the line and column.
-
-## Connectors
-
-A connector is how a workflow reaches something outside Vorn — an issue
-tracker, a document store, a query. It arrives two ways: as a **trigger** that
-starts a workflow when an issue is filed or a query returns a row, and as a
-`callConnectorAction` node that acts partway through one.
+- `message` — the question. `view` — a review page (HTML, or a `.html` path)
+  the reviewer can comment on.
+- `edit` — text the reviewer may rewrite; later steps read
+  `{{steps.<gate>.text}}`. When it expands to a JSON list of records the
+  reviewer gets a table and `{{steps.<gate>.items}}` is the rows they kept,
+  ready for a `forEach` loop.
+- `feedback = { from = "<earlier step id>", maxRounds = 3 }` lets the reviewer
+  send the work back with a comment: everything from that step re-runs, reading
+  `{{steps.<gate>.feedback}}` and `{{steps.<gate>.comments}}`.
+- A reject ends the run.
 
 ```
-list_connectors {}                          # what exists, and what each offers
-install_connector { connector_id, ... }     # creates a connection
-list_connector_actions { connection_id }    # actions, with input schemas
-run_connector_action { connection_id, action, args? }
+list_workflow_runs {}                 # no filter: runs parked on a gate, and what each asks
+resolve_gate { run_id, decision: "approve" | "reject" | "changes", comment?, edited?, comments?, node_id? }
 ```
 
-**Actions belong to a connection, not to a connector.** A connector is the
-integration; a connection is one configured instance of it, with its own
-credentials and filters. Passing a connector id where a `connection_id` belongs
-fails — `list_connections` is where the ids you can actually use come from.
+`changes` needs a `comment`. Read what you are approving first; approve only
+what a person asked you to.
 
-Read `list_connectors` before assuming what is available: each entry carries its
-own triggers, actions, required environment variables, and how it authenticates.
-That answer is better than anything written here, because it reflects what this
-machine has.
+## Run and inspect
 
-Call `list_connector_actions` before wiring a `callConnectorAction` node. The
-action name and its arguments come from there. The node's config is
-`{ nodeType: "callConnectorAction", connectionId, action, args }`: `connectionId`
-from `list_connections`, and `args` a map of templates, e.g.
-`{ "body": "{{loop.item.body}}" }`. Its declared outputs are read as
-`{{steps.<slug>.<field>}}`.
-
-Secrets are refused by `install_connector` on purpose: encryption lives in the
-desktop process, so a person enters them in Settings > Connectors. Everything
-else about a connector can be installed without them.
-
-## Move one between machines
-
-```
-export_workflow { workflow_id }   # absolute paths → {{project.path}}
-import_workflow { ... }           # resolved against a registered project
+```bash
+vorn workflow list [--json]
+vorn workflow run "Triage issues" --input repo=acme/web [--wait] [--json]
+vorn workflow runs --workflow "Triage issues" --limit 5 --json
+vorn workflow stop <run>
 ```
 
-Export rewrites absolute paths and local remote-host bindings so the file is
-portable — commit it beside the code it drives.
+`run` returns once the run is queued; `--wait` stays until it ends, shows its
+progress, and fails when the run does.
+
+```
+list_workflows { workspace_id? }
+execute_workflow { workflow_id, inputs? }
+list_workflow_runs { workflow_id?, task_id?, limit? }   # status, inputs, nodeStates per step
+get_workflow_schedule { workflow_id?, info?: "log" | "next_run" }
+stop_workflow_run { run_id }
+```
+
+Asked why a run did what it did, read its `nodeStates` before theorising.
+
+## Build one through MCP
+
+`create_workflow { name, nodes, edges }` for a full graph (or `trigger` +
+`actions` for a straight line of agents). Edges carry `conditionBranch:
+"true" | "false"` out of a condition. `update_workflow { workflow_id, … }`
+replaces `nodes` and `edges` whole, so read, edit, send the full list.
+`delete_workflow { workflow_id }`. Each node's config is checked against its
+schema, so a wrong field name is refused with its path.
+
+`export_workflow { workflow_id }` makes a portable JSON (paths become
+`{{project.path}}`, connections become requirements);
+`import_workflow { workflow, project_name, bundle? }` brings it back and
+rebinds connections it can match. For a project, a TOML file is simpler.
+
+## Connections in a workflow
+
+`callConnectorAction` runs an action of a connection:
+`connectionId` (from `list_connections`, or `{ "@connection" = "name" }` in a
+file), `action` and `args` (from `list_connector_actions`), every arg a
+template. A `connectorPoll` trigger starts a run per new item, read as
+`{{connectorItem.*}}`. Writing and installing connectors: vorn-connectors.
 
 ## Gotchas
 
-- **`list_workflow_runs` with neither argument lists only runs parked on an
-  approval gate**, each waiting node saying what it asks. Pass `workflow_id` or
-  `task_id` for a workflow's history.
-- **A contextual workflow cannot be exported.** Its nodes hold
-  `{{context.projectName}}`, which is not a registered project, so export has
-  nothing to make the paths relative to.
-- **Connector triggers do not appear in `list_workflows`.** They run as
-  workflows with ids like `connector:<connection>:<trigger>`, and only
-  `get_workflow_schedule { info: "log" }` shows them. Asked why a connector did
-  not fire, look there — `list_workflows` returning nothing is not evidence it
-  does not exist.
+- **Connector triggers do not show in `list_workflows`.** A connection's poll
+  runs as a workflow with id `connector:<connection>:<trigger>`; look in
+  `get_workflow_schedule { info: "log" }`.
+- **A contextual workflow cannot be exported**: its `{{context.*}}` has no
+  project to make paths relative to.
+- **`httpRequest` succeeds on a 4xx or 5xx.** Test
+  `{{steps.<slug>.output}}`; only a network error or the 30 s timeout fails it.
+- **A script's non-zero exit fails the step.** Keep templated values as data
+  (a quoted heredoc), not code.
 
-## Designing one that works
+## Designing one that holds up
 
-Look at an existing workflow before writing your first. `list_workflows` then
-read its nodes: the shape of a real one teaches more than the schema.
-
-What separates a workflow that holds up from one that looks fine and is not:
-
-- **Gate with a `script` node, not an agent's opinion.** Typecheck, tests and
-  coverage either pass or they do not.
-- **Then have an agent check the gate was satisfied honestly.** A test that
-  executes a line and asserts nothing passes coverage and proves nothing.
-- **Put an `approval` node before anything irreversible** — pushing, publishing,
-  closing someone's issue.
-- **Iterative loops accrete.** If a loop implements-then-reviews until it passes,
-  add a cleanup step afterwards to delete what the loop left behind.
+- Gate with a `script` (typecheck, tests) rather than an agent's opinion — then
+  have an agent check the gate was satisfied honestly.
+- Put an `approval` before anything irreversible: pushing, publishing, closing
+  someone's issue.
+- Iterate-until-pass loops accrete; add a cleanup step after them.
+- Read an existing workflow (`list_workflows`, or a file in `.vorn/workflows/`)
+  before writing your first.

@@ -5,17 +5,24 @@ Teaches a coding agent what it can do when it runs inside
 gives it those abilities.
 
 Without this, an agent in a Vorn session behaves like an agent in a bare
-terminal. With it, the agent knows it can drive a browser pane, drive an iOS
-simulator, start and steer sibling agents, and build and run workflows.
+terminal. With it, the agent knows it can open and drive other terminals, start
+and steer other agents, drive a browser pane and an iOS simulator, write and run
+workflows, and build connectors, extensions and agent adapters for Vorn.
+
+Written for Vorn 0.8.
 
 ## What it teaches
 
 | Skill | Covers |
 |---|---|
-| `vorn-browser` | The browser pane — reading pages as an accessibility tree, interacting, console and network output, and design canvases |
+| `vorn-terminals` | The `vorn` command and session tools — start, read, send, wait, events, layouts, OSC 7501 status |
+| `vorn-orchestration` | Splitting work across agent sessions and steering them |
+| `vorn-browser` | The browser pane — accessibility tree, interaction, console and network, artifacts and designs |
 | `vorn-device` | iOS simulators — claiming one, reading the screen, tapping, logs |
-| `vorn-orchestration` | Launching, watching and steering sibling agent sessions |
-| `vorn-workflows` | Building, running and debugging workflows |
+| `vorn-workflows` | Workflow files, steps and triggers, loops, approval gates, running and debugging |
+| `vorn-connectors` | Connections and their actions, and writing a connector with the SDK |
+| `vorn-extensions` | Writing an extension — manifest, permissions, events, storage, UI, contribution points, packing |
+| `vorn-agents` | Adding an agent CLI as an adapter — launch, resume, models, history, status |
 
 ## Install
 
@@ -52,7 +59,7 @@ Restart, or start a fresh session — bundled skills load at session start.
 `skills.paths` at a clone of this repo:
 
 ```
-opencode mcp add vorn -- npx -y @vornrun/mcp@0.7.5
+opencode mcp add vorn -- npx -y @vornrun/mcp@0.8.0-beta.15
 git clone https://github.com/vorn-run/plugin ~/.config/opencode/vorn
 ```
 
@@ -73,7 +80,7 @@ gemini extensions install https://github.com/vorn-run/plugin
 ```
 
 The extension carries both the MCP server and the skills — Gemini has no skills
-system, so `GEMINI.md` includes all four skill files directly rather than loading
+system, so `GEMINI.md` includes every skill file directly rather than loading
 them on demand.
 
 Gemini suppresses MCP servers, including user-level ones, in a folder it does not
@@ -83,15 +90,19 @@ trust. If the server shows as `Disabled`, trust the folder or pass `--skip-trust
 
 | | |
 | --- | --- |
-| `.mcp.json` | the `vorn` MCP server (`@vornrun/mcp`) — 73 tools |
+| `.mcp.json` | the `vorn` MCP server (`@vornrun/mcp`) — 59 tools of Vorn's own, 7 each from the Tasks and Connectors built-ins while they are on, and any an installed extension adds |
+| `skills/vorn-terminals` | the `vorn` command, sessions, events, layouts, OSC 7501 |
+| `skills/vorn-orchestration` | running other agents |
 | `skills/vorn-browser` | driving the session browser pane |
 | `skills/vorn-device` | driving an iOS simulator |
-| `skills/vorn-orchestration` | launching, watching and steering other agents |
-| `skills/vorn-workflows` | building, running and debugging workflows |
+| `skills/vorn-workflows` | writing, running and debugging workflows |
+| `skills/vorn-connectors` | using and writing connectors |
+| `skills/vorn-extensions` | writing extensions |
+| `skills/vorn-agents` | writing agent adapters |
 
-On every harness with a skills system, these load on demand — about 324 tokens
-always-on, and roughly 1k more only when a skill actually fires. Gemini has no
-skills system, so its extension includes all four up front instead.
+On every harness with a skills system, these load on demand — about 900 tokens
+always-on, and 1k to 3k more only when a skill actually fires. Gemini has no
+skills system, so its extension includes them all up front instead.
 
 ## Why skills and not a longer prompt
 
@@ -116,11 +127,22 @@ pinned version turns silence into a failure you can read.
 
 Bump it deliberately when the server gains something the skills rely on.
 
+From 0.8 the package relays to the tools Vorn's server serves, so the tool list
+follows the running Vorn. Vorn also installs `vorn mcp`, the same server over
+stdio with no npm involved; an agent that starts its MCP servers as commands can
+use it instead:
+
+```json
+{ "mcpServers": { "vorn": { "command": "vorn", "args": ["mcp"] } } }
+```
+
 ## Requirements
 
-- The Vorn app running (the MCP server talks to it over a local socket)
-- Browser tools additionally need an interactive session started by Vorn —
-  headless runs have no pane
+- Vorn 0.8 running (its server; the `vorn` command starts one if none is)
+- The `vorn` command on PATH for the command-line examples; Settings › General ›
+  Command-Line Tool installs it
+- Browser and device tools additionally need an interactive session started by
+  Vorn — headless runs have no pane
 
 ## Layout
 
